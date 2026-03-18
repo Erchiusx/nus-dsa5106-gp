@@ -2,6 +2,7 @@ import time
 import groq
 import openai
 import together
+from together.error import TogetherException
 import anthropic
 import google.api_core.exceptions as g_exceptions
 import urllib.request
@@ -20,7 +21,7 @@ def retry_with_exponential_backoff(
         anthropic.BadRequestError, anthropic.InternalServerError, anthropic.RateLimitError,
         urllib.error.HTTPError, urllib.error.URLError,
         groq.RateLimitError, groq.InternalServerError, groq.APIConnectionError,
-        together.error.TogetherException,
+        TogetherException,
         ValueError, IndexError, UnboundLocalError
     )
     """Retry a function with exponential backoff."""

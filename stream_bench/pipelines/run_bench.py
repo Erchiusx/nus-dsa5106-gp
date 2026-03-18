@@ -5,6 +5,7 @@ os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 import json
 import yaml
 import wandb
+from itertools import islice
 from pathlib import Path
 from tqdm import tqdm
 from argparse import ArgumentParser, Namespace
@@ -51,8 +52,48 @@ def setup_args() -> Namespace:
         default=None,
         help="The name of the experiment for wandb."
     )
+    parser.add_argument(
+        "--max_samples",
+        type=int,
+        default=None,
+        help="Run only the first N shuffled samples for a quick smoke test."
+    )
 
     return parser.parse_args()
+
+
+def limit_dataset(dataset, max_samples: int | None):
+    if max_samples is None:
+        return dataset
+    if max_samples < 0:
+        raise ValueError("--max_samples must be non-negative.")
+    if hasattr(dataset, "select") and hasattr(dataset, "__len__"):
+        return dataset.select(range(min(max_samples, len(dataset))))
+    return list(islice(dataset, max_samples))
+
+
+def inject_parse_context(agent, bench: Bench, row_input: dict) -> dict:
+    if ("parse_template" in row_input) or ("label_set" in row_input):
+        return row_input
+    if "prompt_zeroshot" not in row_input:
+        return row_input
+
+    label_map = getattr(bench, "LABEL2TEXT", None)
+    if not isinstance(label_map, dict) or len(label_map) == 0:
+        return row_input
+
+    options = [f"{idx}. {text}" for idx, text in label_map.items()]
+    row_input["label_set"] = set(options)
+    row_input["parse_template"] = (
+        "Original task:\n"
+        f"{row_input['prompt_zeroshot']}\n\n"
+        "Model output: {model_output}\n\n"
+        "If the model output is incomplete, malformed, or unrelated, solve the original task again and return the single best option.\n"
+        "Convert the model output into one of the following options (one option per line):\n"
+        f"{agent.get_options_text(set(options))}\n\n"
+        "Answer (please only answer with a single option):"
+    )
+    return row_input
 
 
 def main():
@@ -71,6 +112,9 @@ def main():
     print('init bench environment')
     bench: Bench = load_benchmark(bench_cfg['bench_name'])(**bench_cfg)
     agent.bench = bench
+    dataset = limit_dataset(bench.get_dataset(), args.max_samples)
+    if args.max_samples is not None:
+        print(f"running a limited smoke test on {len(dataset)} sample(s)")
 
     if args.use_wandb:
         wandb.init(
@@ -80,11 +124,12 @@ def main():
             config=merge_dicts(dicts=[agent_cfg, bench_cfg])  # NOTE: agent configurations and benchmark configurations
         )
 
-    for time_step, row in enumerate(tqdm(bench.get_dataset(), dynamic_ncols=True)):
+    for time_step, row in enumerate(tqdm(dataset, dynamic_ncols=True)):
         try:
             row['time_step'] = time_step
             x = bench.get_input(row)  # remove ground truth related information
             x['time_step'] = time_step
+            x = inject_parse_context(agent, bench, x)
             model_output = agent(**x)
             prediction = bench.postprocess_generation(model_output, time_step)
             label = bench.get_output(row)

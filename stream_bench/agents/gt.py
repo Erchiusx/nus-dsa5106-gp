@@ -1,6 +1,7 @@
 from stream_bench.agents.base import Agent
 
 class GroundTruthAgent(Agent):
+    USES_LLM = False
 
     def __init__(self, config: dict) -> None:
         super().__init__(config)

@@ -5,6 +5,7 @@ from .utils import get_llm, setup_logger
 
 # The base class used for classification and multi-choice questions (MCQs)
 class Agent:
+    USES_LLM = True
     LOG_KEYS = [
         "num_inference_call",  # number of inference call to the LLM
         "num_success_call",  # (per-call-level) whether the inference / API call is successful
@@ -22,8 +23,10 @@ class Agent:
 
     def __init__(self, config: dict) -> None:
         self.config = config
-        self.llm_config = config["llm"]
-        self.llm = get_llm(series=self.llm_config["series"], model_name=self.llm_config["model_name"])
+        self.llm_config = config.get("llm", {})
+        self.llm = None
+        if self.USES_LLM and self.llm_config:
+            self.llm = get_llm(series=self.llm_config["series"], model_name=self.llm_config["model_name"])
         # Setup logging info
         self.exp_name = config["exp_name"] if "exp_name" in config else self.get_name()
         self.log_path = f'log/{config["bench_name"]}/{config["split"]}/{self.exp_name}.jsonl'

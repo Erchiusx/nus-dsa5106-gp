@@ -47,6 +47,12 @@ python -m stream_bench.pipelines.run_bench \
 ```
 In this example, we run the `GroundTruthAgent` on `DS-1000`. One may run on other datasets by replacing the `<dataset_name>.yml` file of the `--bench_cfg` argument.
 
+On Windows, the `DS-1000` sanity check can fail with newer scientific Python packages even when the code is correct. If the `GroundTruthAgent` does not reach `pass@1 = 1.0`, we reproduced the benchmark with the following versions:
+```
+python -m pip install protobuf==3.20.3 scipy==1.10.1 matplotlib==3.8.4
+```
+`protobuf==3.20.3` may conflict with the Google client libraries used by some Gemini / Vertex setups. If you need both environments, use a separate virtual environment for the `DS-1000` sanity check.
+
 ### Run the Main Script
 In this example, the `ZeroShot` baseline on the `DDXPlus` dataset is executed. Written scripts for running other datasets can be found in `./scripts`.
 ```

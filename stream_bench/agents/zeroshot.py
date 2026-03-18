@@ -1,3 +1,5 @@
+import re
+
 from .base import Agent
 from .utils import text_in_label_set, parse_pred_text
 
@@ -34,6 +36,8 @@ class ZeroShotAgent(Agent):
         if label_set is not None:
             # (Optional) Parse pred_text into one of the labels in label_set
             pred_text = parse_pred_text(pred_text, label_set)  # simple heuristics for removing leading and trailing characters
+            if re.match(pattern=r"^\s*\d+\b", string=pred_text):
+                return pred_text
             if not text_in_label_set(text=pred_text, label_set=label_set):
                 prompt_parse = parse_template.format(model_output=pred_text)
                 parse_text, parse_info = self.llm(prompt=prompt_parse, max_tokens=self.llm_config["max_tokens"], temperature=self.llm_config["temperature"])

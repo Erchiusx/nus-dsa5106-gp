@@ -1,33 +1,25 @@
+from importlib import import_module
+
 from .base import Agent
-from .zeroshot import ZeroShotAgent
-from .fewshot import FewShotAgent
-from .cot import CoTAgent
-from .iter_prompt import IterPromptAgent
-from .scratchpad import ScratchPadAgent
-from .fewshot_rag import FewShotRAGAgent
-from .multiagent_rag import MultiAgent
-from .gt import GroundTruthAgent
 
-classes = locals()
-
-TASKS = {
-    "zeroshot": ZeroShotAgent,
-    "fewshot": FewShotAgent,
-    "cot": CoTAgent,
-    "self_refine": IterPromptAgent,
-    "grow_prompt": ScratchPadAgent,
-    "mem_prompt": FewShotRAGAgent,
-    "self_stream_icl": FewShotRAGAgent,
-    "self_stream_icl_cot": FewShotRAGAgent,
-    "ma_rr": MultiAgent,
-    "ma_rr_cot": MultiAgent,
-    "gt": GroundTruthAgent
+_TASK_SPECS = {
+    "zeroshot": ("stream_bench.agents.zeroshot", "ZeroShotAgent"),
+    "fewshot": ("stream_bench.agents.fewshot", "FewShotAgent"),
+    "cot": ("stream_bench.agents.cot", "CoTAgent"),
+    "self_refine": ("stream_bench.agents.iter_prompt", "IterPromptAgent"),
+    "grow_prompt": ("stream_bench.agents.scratchpad", "ScratchPadAgent"),
+    "mem_prompt": ("stream_bench.agents.fewshot_rag", "FewShotRAGAgent"),
+    "self_stream_icl": ("stream_bench.agents.fewshot_rag", "FewShotRAGAgent"),
+    "self_stream_icl_cot": ("stream_bench.agents.fewshot_rag", "FewShotRAGAgent"),
+    "ma_rr": ("stream_bench.agents.multiagent_rag", "MultiAgent"),
+    "ma_rr_cot": ("stream_bench.agents.multiagent_rag", "MultiAgent"),
+    "gt": ("stream_bench.agents.gt", "GroundTruthAgent"),
 }
 
-def load_agent(agent_name):
-    if agent_name in TASKS:
-        return TASKS[agent_name]
-    if agent_name in classes:
-        return classes[agent_name]
 
-    raise ValueError("Agent %s not found" % agent_name)
+def load_agent(agent_name: str) -> type[Agent]:
+    if agent_name not in _TASK_SPECS:
+        raise ValueError("Agent %s not found" % agent_name)
+
+    module_name, attr_name = _TASK_SPECS[agent_name]
+    return getattr(import_module(module_name), attr_name)

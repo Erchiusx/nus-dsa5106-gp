@@ -1,11 +1,11 @@
 import json
 import textwrap
-import evaluate
 from datasets import Dataset
 from colorama import Fore, Style
 
 from stream_bench.llms.oai_chat import OpenAIChat
 from stream_bench.benchmarks.base import Bench
+from stream_bench.benchmarks.metrics import compute_exact_match
 from stream_bench.benchmarks.utils import strip_all_lines, extract_json_string
 
 class GSM8KBench(Bench):
@@ -25,7 +25,6 @@ class GSM8KBench(Bench):
         self.split = split
         self.seed = seed
         self.feedback = feedback
-        self.eval_func = evaluate.load("exact_match")
         self.llm = OpenAIChat(model_name=self.EVAL_LLM)
 
     def get_dataset(self) -> Dataset:
@@ -50,7 +49,7 @@ class GSM8KBench(Bench):
         return {"rationale": rationale, "answer": answer}
 
     def get_metrics(self) -> dict:
-        metrics = self.eval_func.compute(
+        metrics = compute_exact_match(
             predictions=self.predictions,
             references=self.references,
             ignore_punctuation=True
@@ -84,7 +83,7 @@ class GSM8KBench(Bench):
         **kwargs
     ) -> bool | dict:
         answer = label["answer"]
-        correct = self.eval_func.compute(
+        correct = compute_exact_match(
             predictions=[prediction],
             references=[answer]
         )["exact_match"]

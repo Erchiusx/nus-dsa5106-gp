@@ -1,5 +1,6 @@
 import re
 import copy
+import platform
 import textwrap
 import warnings
 warnings.filterwarnings("default")
@@ -45,7 +46,7 @@ class DS1000(Bench):
         self.feedback = feedback
         self.total = 0
         self.correct_stats = {lib: [] for lib in ['Pytorch', 'Tensorflow', 'Pandas', 'Numpy', 'Matplotlib', 'Sklearn', 'Scipy']}
-        self.timeout = timeout
+        self.timeout = 15.0 if (platform.system() == "Windows" and timeout == 3.0) else timeout
         self.agent_callback = None
         if hasattr(agent, 'retrieve_experience'):
             self.agent_callback = agent.retrieve_experience

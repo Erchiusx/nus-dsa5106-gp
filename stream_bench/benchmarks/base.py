@@ -1,5 +1,4 @@
 import random
-import evaluate
 import textwrap
 from abc import ABC, abstractmethod
 from typing import Any

@@ -1,9 +1,9 @@
 import re
 import textwrap
-import evaluate
 from datasets import Dataset
 
 from stream_bench.benchmarks.base import Bench
+from stream_bench.benchmarks.metrics import compute_accuracy
 from stream_bench.benchmarks.utils import strip_all_lines
 
 class MedicalDiagnosisBench(Bench):
@@ -207,14 +207,17 @@ class MedicalDiagnosisBench(Bench):
         return self.TEXT2LABEL[label_text]
 
     def get_metrics(self) -> dict:
-        accuracy = evaluate.load("accuracy")
-        metrics = accuracy.compute(predictions=self.predictions, references=self.references)
-        return metrics        
+        return compute_accuracy(predictions=self.predictions, references=self.references)
 
     def postprocess_generation(self, res: str, idx: int = -1) -> int:
         res = res.lower().strip()
         # Search for the pattern <number>. <diagnosis> using `re`, and extract <number>
         numbers = re.findall(pattern=r"(\d+)\.", string=res)
+        if len(numbers) == 0:
+            # Gemini often returns just the diagnosis index, e.g. "7"
+            bare_number = re.match(pattern=r"^\s*(\d+)(?:\s|$|:|-)", string=res)
+            if bare_number is not None:
+                numbers = [bare_number.group(1)]
         if len(numbers) == 1:
             number = int(numbers[0])
             if number in self.LABEL2TEXT:
@@ -245,13 +248,14 @@ class MedicalDiagnosisBench(Bench):
         :param labels: original labels
             list of str containing refrences
         """
-        accuracy = evaluate.load("accuracy")
         correct = prediction == label
         self.n_correct += correct
         self.predictions.append(prediction)
         self.references.append(label)
-        rolling_acc = accuracy.compute(predictions=self.predictions,
-                                       references=self.references)["accuracy"]
+        rolling_acc = compute_accuracy(
+            predictions=self.predictions,
+            references=self.references,
+        )["accuracy"]
 
         if return_details:
             return {

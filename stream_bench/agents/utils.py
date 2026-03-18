@@ -1,11 +1,7 @@
-import torch
-import faiss
 import random
 import logging
-import numpy as np
 from enum import Enum
 from pathlib import Path
-from transformers import AutoTokenizer, AutoModel
 
 class JSONLinesHandler(logging.FileHandler):
     def emit(self, record):
@@ -76,6 +72,12 @@ class RetrieveOrder(Enum):
 class RAG:
 
     def __init__(self, rag_config: dict) -> None:
+        import faiss
+        import numpy as np
+        from transformers import AutoModel, AutoTokenizer
+
+        self.faiss = faiss
+        self.np = np
         self.tokenizer = AutoTokenizer.from_pretrained(rag_config["embedding_model"])
         self.embed_model = AutoModel.from_pretrained(rag_config["embedding_model"]).eval()
         
@@ -96,9 +98,11 @@ class RAG:
 
     def create_faiss_index(self):
         # Create a FAISS index
-        self.index = faiss.IndexFlatL2(self.embed_dim)
+        self.index = self.faiss.IndexFlatL2(self.embed_dim)
 
-    def encode_data(self, sentence: str) -> np.ndarray:
+    def encode_data(self, sentence: str):
+        import torch
+
         # Tokenize the sentence
         encoded_input = self.tokenizer([sentence], padding=True, truncation=True, return_tensors="pt")
         # Compute token embeddings
@@ -107,13 +111,13 @@ class RAG:
             # Perform pooling. In this case, cls pooling.
             sentence_embeddings = model_output[0][:, 0]
         feature = sentence_embeddings.numpy()[0]
-        norm = np.linalg.norm(feature)
+        norm = self.np.linalg.norm(feature)
         return feature / norm
 
     def insert(self, key: str, value: str) -> None:
         """Use the key text as the embedding for future retrieval of the value text."""
         embedding = self.encode_data(key).astype('float32')  # Ensure the data type is float32
-        self.index.add(np.expand_dims(embedding, axis=0))
+        self.index.add(self.np.expand_dims(embedding, axis=0))
         self.id2evidence[str(self.insert_acc)] = value
         self.insert_acc += 1
 
@@ -121,7 +125,7 @@ class RAG:
         """Retrieve top-k text chunks"""
         embedding = self.encode_data(query).astype('float32')  # Ensure the data type is float32
         top_k = min(top_k, self.insert_acc)
-        distances, indices = self.index.search(np.expand_dims(embedding, axis=0), top_k)
+        distances, indices = self.index.search(self.np.expand_dims(embedding, axis=0), top_k)
         distances = distances[0].tolist()
         indices = indices[0].tolist()
         

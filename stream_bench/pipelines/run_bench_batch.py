@@ -10,6 +10,7 @@ import json
 import yaml
 import wandb
 import jsonlines
+from itertools import islice
 from pathlib import Path
 from tqdm import tqdm
 from openai import OpenAI
@@ -59,8 +60,24 @@ def setup_args() -> Namespace:
         default=None,
         help="The name of the experiment for wandb."
     )
+    parser.add_argument(
+        "--max_samples",
+        type=int,
+        default=None,
+        help="Run only the first N shuffled samples for a quick smoke test."
+    )
 
     return parser.parse_args()
+
+
+def limit_dataset(dataset, max_samples: int | None):
+    if max_samples is None:
+        return dataset
+    if max_samples < 0:
+        raise ValueError("--max_samples must be non-negative.")
+    if hasattr(dataset, "select") and hasattr(dataset, "__len__"):
+        return dataset.select(range(min(max_samples, len(dataset))))
+    return list(islice(dataset, max_samples))
 
 def get_prompt(agent: Agent, bench: Bench, row: dict) -> str:
     x = bench.get_input(row)
@@ -71,8 +88,10 @@ def get_prompt(agent: Agent, bench: Bench, row: dict) -> str:
 
 def prepare_batch_file(
     agent: Agent,
+    dataset,
     bench: Bench,
-    save_dir: Path = Path("./batch_upload_files")
+    save_dir: Path = Path("./batch_upload_files"),
+    sample_suffix: str = ""
 ) -> Path:
     """Prepare and save the file for uploading to OpenAI Batch API.
     
@@ -82,14 +101,14 @@ def prepare_batch_file(
     # File preparation
     save_dir = save_dir / bench.__class__.__name__
     save_dir.mkdir(parents=True, exist_ok=True)
-    save_path = save_dir / f"{agent.get_name()}_batch.jsonl"
+    save_path = save_dir / f"{agent.get_name()}{sample_suffix}_batch.jsonl"
     # Save batch inputs to the file
     if not os.path.exists(save_path):
         print(f"Saving the batch file to {save_path}")
         # Check for existence of response_format
         response_format = agent.config.get("response_format", None)
         with open(save_path, 'w') as f:
-            for time_step, row in enumerate(tqdm(bench.get_dataset(), dynamic_ncols=True)):
+            for time_step, row in enumerate(tqdm(dataset, dynamic_ncols=True)):
                 custom_id = f"step-{time_step}"
                 prompt = get_prompt(agent, bench, row)
                 msg = {
@@ -220,13 +239,23 @@ def main():
     print('init bench environment')
     bench: Bench = load_benchmark(bench_cfg['bench_name'])(**bench_cfg)
     agent.bench = bench
+    dataset = limit_dataset(bench.get_dataset(), args.max_samples)
+    sample_suffix = f"_first{len(dataset)}" if args.max_samples is not None else ""
+    if args.max_samples is not None:
+        print(f"running a limited smoke test on {len(dataset)} sample(s)")
 
     # Prepare, upload, wait for, and download from Batch APIs
     BATCH_UPLOAD_DIR = Path("./batch_upload_files")
     BATCH_DOWNLOAD_DIR = Path("./batch_download_files")
-    batch_download_path = BATCH_DOWNLOAD_DIR / bench.__class__.__name__ / f"{agent.get_name()}_batch.jsonl"
+    batch_download_path = BATCH_DOWNLOAD_DIR / bench.__class__.__name__ / f"{agent.get_name()}{sample_suffix}_batch.jsonl"
     if not os.path.exists(batch_download_path):
-        file_to_upload = prepare_batch_file(agent, bench, save_dir=BATCH_UPLOAD_DIR)
+        file_to_upload = prepare_batch_file(
+            agent,
+            dataset,
+            bench,
+            save_dir=BATCH_UPLOAD_DIR,
+            sample_suffix=sample_suffix
+        )
         batch_obj = upload_batch_file(file_to_upload)
         wait_until_finished(
             batch_obj,
@@ -242,7 +271,7 @@ def main():
             config=merge_dicts(dicts=[agent_cfg, bench_cfg])  # NOTE: agent configurations and benchmark configurations
         )
 
-    for time_step, row in enumerate(tqdm(bench.get_dataset(), dynamic_ncols=True)):
+    for time_step, row in enumerate(tqdm(dataset, dynamic_ncols=True)):
         row['time_step'] = time_step
         model_output = step2info[time_step]["output_pred"]
         prediction = bench.postprocess_generation(model_output, time_step)

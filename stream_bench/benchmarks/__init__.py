@@ -1,30 +1,24 @@
+from importlib import import_module
+
 from .base import Bench
-from .ddxplus import create_ddxplus
-from .ds_1000 import DS1000
-from .hotpotqa_distract import HotpotQADistract
-from .toolbench import ToolBench
-from .gsm8k import GSM8KBench
-from .math import MATHBench
-from .text_to_sql import create_bird, create_cosql, create_spider
 
-classes = locals()
-
-TASKS = {
-    "ddxplus": create_ddxplus(),
-    "ds_1000": DS1000,
-    "hotpotqa_distract": HotpotQADistract,
-    "toolbench": ToolBench,
-    "gsm8k": GSM8KBench,
-    "math": MATHBench,
-    "bird": create_bird(),
-    "cosql": create_cosql(),
-    "spider": create_spider(),
+_TASK_SPECS = {
+    "ddxplus": ("stream_bench.benchmarks.ddxplus", "create_ddxplus", True),
+    "ds_1000": ("stream_bench.benchmarks.ds_1000", "DS1000", False),
+    "hotpotqa_distract": ("stream_bench.benchmarks.hotpotqa_distract", "HotpotQADistract", False),
+    "toolbench": ("stream_bench.benchmarks.toolbench", "ToolBench", False),
+    "gsm8k": ("stream_bench.benchmarks.gsm8k", "GSM8KBench", False),
+    "math": ("stream_bench.benchmarks.math", "MATHBench", False),
+    "bird": ("stream_bench.benchmarks.text_to_sql", "create_bird", True),
+    "cosql": ("stream_bench.benchmarks.text_to_sql", "create_cosql", True),
+    "spider": ("stream_bench.benchmarks.text_to_sql", "create_spider", True),
 }
 
-def load_benchmark(benchmark_name) -> Bench:
-    if benchmark_name in TASKS:
-        return TASKS[benchmark_name]
-    if benchmark_name in classes:
-        return classes[benchmark_name]
 
-    raise ValueError("Benchmark %s not found" % benchmark_name)
+def load_benchmark(benchmark_name: str) -> type[Bench]:
+    if benchmark_name not in _TASK_SPECS:
+        raise ValueError("Benchmark %s not found" % benchmark_name)
+
+    module_name, attr_name, is_factory = _TASK_SPECS[benchmark_name]
+    task = getattr(import_module(module_name), attr_name)
+    return task() if is_factory else task

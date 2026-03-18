@@ -5,10 +5,13 @@
 from typing import Optional, Dict
 import contextlib
 import io
+import json
 import os
 import shutil
 import platform
 import signal
+import subprocess
+import sys
 import tempfile
 from colorama import Fore, Style
 
@@ -20,6 +23,9 @@ def check_correctness(program: str, timeout: float, completion_id: Optional[int]
     :param completion_id: an optional completion ID so we can match
         the results later even if execution finishes asynchronously.
     """
+    if platform.system() == "Windows":
+        return _check_correctness_windows(program, timeout, completion_id)
+
     result = []
 
     with create_tempdir():
@@ -39,6 +45,7 @@ def check_correctness(program: str, timeout: float, completion_id: Optional[int]
             exec_globals = {}
             with swallow_io():
                 with time_limit(timeout):
+                    _preload_optional_dependencies(program)
                     exec(check_program, exec_globals)
             result.append("passed")
         except TimeoutException:
@@ -60,6 +67,115 @@ def check_correctness(program: str, timeout: float, completion_id: Optional[int]
         result=result[0],
         completion_id=completion_id,
     )
+
+
+def _check_correctness_windows(program: str, timeout: float, completion_id: Optional[int] = None) -> Dict:
+    with tempfile.TemporaryDirectory() as dirname:
+        script_path = os.path.join(dirname, "_ds1000_exec.py")
+        result_path = os.path.join(dirname, "_ds1000_result.json")
+        with open(script_path, "w", encoding="utf-8") as f:
+            f.write(_build_windows_runner(program=program, result_path=result_path))
+
+        try:
+            subprocess.run(
+                [sys.executable, script_path],
+                cwd=dirname,
+                timeout=timeout,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if os.path.exists(result_path):
+                with open(result_path, "r", encoding="utf-8") as f:
+                    result = json.load(f)["result"]
+            else:
+                result = "failed: runner did not produce a result"
+        except subprocess.TimeoutExpired:
+            result = "timed out"
+
+    return dict(
+        passed=result == "passed",
+        result=result,
+        completion_id=completion_id,
+    )
+
+
+def _preload_optional_dependencies(program: str) -> None:
+    _prepare_env_for_program(program)
+    # In this Windows environment, importing pandas before torch can break torch DLL initialization.
+    # Preloading torch keeps the benchmark execution order stable for PyTorch tasks.
+    if ("import torch" in program) or ("from torch" in program):
+        import torch  # noqa: F401
+    _patch_scipy_integrate_trapz()
+
+
+def _prepare_env_for_program(program: str) -> None:
+    if ("import tensorflow" in program) or ("from tensorflow" in program):
+        os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
+
+
+def _patch_scipy_integrate_trapz() -> None:
+    try:
+        import numpy as np
+        import scipy.integrate as scipy_integrate
+        if not hasattr(scipy_integrate, "trapz"):
+            scipy_integrate.trapz = np.trapz
+    except Exception:
+        pass
+
+
+def _build_windows_runner(program: str, result_path: str) -> str:
+    return f'''import contextlib
+import io
+import json
+import os
+
+
+class WriteOnlyStringIO(io.StringIO):
+    def read(self, *args, **kwargs):
+        raise IOError
+
+    def readline(self, *args, **kwargs):
+        raise IOError
+
+    def readlines(self, *args, **kwargs):
+        raise IOError
+
+    def readable(self, *args, **kwargs):
+        return False
+
+
+class redirect_stdin(contextlib._RedirectStream):
+    _stream = "stdin"
+
+
+program = {program!r}
+result_path = {result_path!r}
+result = "passed"
+
+try:
+    stream = WriteOnlyStringIO()
+    with contextlib.redirect_stdout(stream):
+        with contextlib.redirect_stderr(stream):
+            with redirect_stdin(stream):
+                if ("import tensorflow" in program) or ("from tensorflow" in program):
+                    os.environ.setdefault("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
+                if ("import torch" in program) or ("from torch" in program):
+                    import torch  # noqa: F401
+                try:
+                    import numpy as np
+                    import scipy.integrate as scipy_integrate
+                    if not hasattr(scipy_integrate, "trapz"):
+                        scipy_integrate.trapz = np.trapz
+                except Exception:
+                    pass
+                exec(program, {{}})
+except BaseException as e:
+    result = f"failed: {{e}}"
+
+with open(result_path, "w", encoding="utf-8") as f:
+    json.dump({{"result": result}}, f)
+'''
 
 
 @contextlib.contextmanager
