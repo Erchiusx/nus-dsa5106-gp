@@ -20,6 +20,7 @@ class GSM8KBench(Bench):
         seed: int = 42,
         feedback: str = "correctness",
         max_samples: int | None = None,
+        streambench_window_size: int = 5,
         **kwargs
     ) -> None:
         super().__init__({})
@@ -27,8 +28,13 @@ class GSM8KBench(Bench):
         self.seed = seed
         self.feedback = feedback
         self.max_samples = max_samples
+        if streambench_window_size <= 0:
+            raise ValueError("streambench_window_size must be a positive integer")
+        self.streambench_window_size = streambench_window_size
         self.eval_func = evaluate.load("exact_match")
         self.llm = OpenAIChat(model_name=self.EVAL_LLM)
+        self.window_scores = []
+        self.window_deltas = []
 
     def get_dataset(self) -> Dataset:
         dataset = self.dataset[self.split].shuffle(seed=self.seed)
@@ -63,6 +69,55 @@ class GSM8KBench(Bench):
             references=self.references,
             ignore_punctuation=True
         )
+        metrics.update({
+            "streambench_window_size": self.streambench_window_size,
+            "streambench_num_windows": len(self.window_scores),
+            "streambench_window_scores": self.window_scores,
+            "streambench_window_deltas": self.window_deltas,
+        })
+        if self.window_scores:
+            metrics["streambench_last_window_em"] = self.window_scores[-1]
+            metrics["streambench_best_window_em"] = max(self.window_scores)
+        if self.window_deltas:
+            metrics["streambench_last_window_delta"] = self.window_deltas[-1]
+            metrics["streambench_max_window_gain"] = max(self.window_deltas)
+            metrics["streambench_max_window_drop"] = min(self.window_deltas)
+        return metrics
+
+    def compute_streambench(self, predictions: list[str], references: list[str]) -> float:
+        return self.eval_func.compute(
+            predictions=predictions,
+            references=references,
+            ignore_punctuation=True
+        )["exact_match"]
+
+    def should_evaluate_window(self) -> bool:
+        num_samples = len(self.predictions)
+        return num_samples > 0 and (num_samples % self.streambench_window_size == 0)
+
+    def evaluate_recent_window(self) -> dict | None:
+        if not self.should_evaluate_window():
+            return None
+
+        window_end = len(self.predictions)
+        window_start = window_end - self.streambench_window_size
+        window_score = self.compute_streambench(
+            predictions=self.predictions[window_start:window_end],
+            references=self.references[window_start:window_end]
+        )
+
+        self.window_scores.append(window_score)
+        metrics = {
+            "streambench_window_closed": 1,
+            "streambench_window_index": len(self.window_scores) - 1,
+            "streambench_window_start": window_start,
+            "streambench_window_end": window_end - 1,
+            "streambench_window_em": window_score,
+        }
+        if len(self.window_scores) >= 2:
+            window_delta = self.window_scores[-1] - self.window_scores[-2]
+            self.window_deltas.append(window_delta)
+            metrics["streambench_window_delta"] = window_delta
         return metrics
 
     def postprocess_generation(self, res: str, idx: int = -1) -> str:
@@ -100,11 +155,16 @@ class GSM8KBench(Bench):
         self.predictions.append(prediction)
         self.references.append(answer)
         if return_details:
-            return {
+            metrics = {
                 "correct": int(correct),
                 "n_correct": self.n_correct,
+                "streambench_window_closed": 0,
                 "rolling_em": self.get_metrics()["exact_match"]
             }
+            window_metrics = self.evaluate_recent_window()
+            if window_metrics is not None:
+                metrics.update(window_metrics)
+            return metrics
         return bool(correct)
 
     def give_feedback(self, model_output: str, row: dict, res: dict) -> tuple[bool, dict]:

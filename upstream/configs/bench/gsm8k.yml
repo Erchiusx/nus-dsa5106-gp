@@ -3,3 +3,4 @@ split: "test"
 feedback: "correctness"
 seed: 42
 max_samples: 20
+streambench_window_size: 5
