@@ -1,0 +1,5 @@
+bench_name: "gsm8k"
+split: "test"
+feedback: "correctness"
+seed: 42
+max_samples: 20

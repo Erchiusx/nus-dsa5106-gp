@@ -1,0 +1,41 @@
+# LLM endpoints
+# close-weight
+openai
+anthropic
+google-generativeai
+google-cloud-aiplatform
+# open-weight
+groq
+together
+
+# ML/DL
+numpy==1.23.5
+torch
+gensim
+xgboost==1.6.2
+faiss-cpu
+tensorflow
+statsmodels
+transformers
+scikit-learn
+
+# Data handling
+PyYAML
+pandas==1.3.5
+datasets
+evaluate
+matplotlib
+seaborn
+gdown
+
+# Logging
+wandb
+
+# Utility functions
+tqdm
+colorama
+jsonlines
+func_timeout
+ipykernel
+bitsandbytes
+accelerate
