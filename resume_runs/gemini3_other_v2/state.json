@@ -1,0 +1,60 @@
+{
+  "manifest": {
+    "run_name": "gemini3_other_v2",
+    "agent_cfg": "configs\\agent\\zeroshot_gemini_3_tuned.yml",
+    "benches": [
+      "ds_1000",
+      "ddxplus",
+      "hotpotqa"
+    ],
+    "max_samples": null,
+    "metric_keys": {
+      "ds_1000": [
+        "pass@1"
+      ],
+      "ddxplus": [
+        "accuracy"
+      ],
+      "hotpotqa": [
+        "em",
+        "f1"
+      ]
+    }
+  },
+  "current_bench": null,
+  "benchmarks": {
+    "ds_1000": {
+      "bench_cfg": "configs\\bench\\ds_1000.yml",
+      "processed": 1000,
+      "next_index": 1000,
+      "total": 1000,
+      "status": "completed",
+      "metrics": {
+        "pass@1": 0.817
+      },
+      "n_correct": 817
+    },
+    "ddxplus": {
+      "bench_cfg": "configs\\bench\\ddxplus.yml",
+      "processed": 1764,
+      "next_index": 1764,
+      "total": 1764,
+      "status": "completed",
+      "metrics": {
+        "accuracy": 0.7715419501133787
+      },
+      "n_correct": 1361
+    },
+    "hotpotqa": {
+      "bench_cfg": "configs\\bench\\hotpotqa.yml",
+      "processed": 1500,
+      "next_index": 1500,
+      "total": 1500,
+      "status": "completed",
+      "metrics": {
+        "em": 0.6800000000000005,
+        "f1": 0.8291995657478616
+      }
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "run_name": "gemini3_sql_only",
+  "agent_cfg": "configs\\agent\\zeroshot_gemini_3_tuned.yml",
+  "benches": [
+    "spider",
+    "cosql",
+    "bird"
+  ],
+  "max_samples": null,
+  "metric_keys": {
+    "spider": [
+      "EX"
+    ],
+    "cosql": [
+      "EX"
+    ],
+    "bird": [
+      "EX"
+    ]
+  }
+}

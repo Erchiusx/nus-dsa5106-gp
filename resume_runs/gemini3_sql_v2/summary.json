@@ -1,0 +1,37 @@
+{
+  "benchmarks": {
+    "spider": {
+      "bench_cfg": "configs\\bench\\spider.yml",
+      "processed": 2147,
+      "next_index": 2147,
+      "total": 2147,
+      "status": "completed",
+      "metrics": {
+        "EX": 0.8178854215183977
+      },
+      "n_correct": 1756
+    },
+    "cosql": {
+      "bench_cfg": "configs\\bench\\cosql.yml",
+      "processed": 1007,
+      "next_index": 1007,
+      "total": 1007,
+      "status": "completed",
+      "metrics": {
+        "EX": 0.5928500496524329
+      },
+      "n_correct": 597
+    },
+    "bird": {
+      "bench_cfg": "configs\\bench\\bird.yml",
+      "processed": 1534,
+      "next_index": 1534,
+      "total": 1534,
+      "status": "completed",
+      "metrics": {
+        "EX": 0.42046936114732725
+      },
+      "n_correct": 645
+    }
+  }
+}

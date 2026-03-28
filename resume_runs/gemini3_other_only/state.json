@@ -1,0 +1,38 @@
+{
+  "manifest": {
+    "run_name": "gemini3_other_only",
+    "agent_cfg": "configs\\agent\\zeroshot_gemini_3_tuned.yml",
+    "benches": [
+      "ds_1000",
+      "ddxplus",
+      "hotpotqa"
+    ],
+    "max_samples": null,
+    "metric_keys": {
+      "ds_1000": [
+        "pass@1"
+      ],
+      "ddxplus": [
+        "accuracy"
+      ],
+      "hotpotqa": [
+        "em",
+        "f1"
+      ]
+    }
+  },
+  "current_bench": null,
+  "benchmarks": {
+    "ds_1000": {
+      "bench_cfg": "configs\\bench\\ds_1000.yml",
+      "processed": 619,
+      "next_index": 619,
+      "total": 1000,
+      "status": "running",
+      "metrics": {
+        "pass@1": 0.4604200323101777
+      },
+      "n_correct": 285
+    }
+  }
+}

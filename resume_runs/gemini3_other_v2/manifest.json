@@ -1,0 +1,22 @@
+{
+  "run_name": "gemini3_other_v2",
+  "agent_cfg": "configs\\agent\\zeroshot_gemini_3_tuned.yml",
+  "benches": [
+    "ds_1000",
+    "ddxplus",
+    "hotpotqa"
+  ],
+  "max_samples": null,
+  "metric_keys": {
+    "ds_1000": [
+      "pass@1"
+    ],
+    "ddxplus": [
+      "accuracy"
+    ],
+    "hotpotqa": [
+      "em",
+      "f1"
+    ]
+  }
+}
