@@ -23,7 +23,7 @@ class Agent:
 
     def __init__(self, config: dict) -> None:
         self.config = config
-        self.llm_config = config.get("llm", {})
+        self.llm_config = self._resolve_llm_config(config.get("llm", {}), config.get("bench_name"))
         self.llm = None
         if self.USES_LLM and self.llm_config:
             self.llm = get_llm(series=self.llm_config["series"], model_name=self.llm_config["model_name"])
@@ -33,6 +33,16 @@ class Agent:
         self.logger = setup_logger(name="jsonlines_logger", log_file=self.log_path)
         self.log_info = {KEY: 0 for KEY in self.LOG_KEYS}  # log information of the current data point
         self.accum_log_info = {KEY: 0 for KEY in self.LOG_KEYS}  # accum_log_info: accumulation of self.log_info through time steps
+
+    @staticmethod
+    def _resolve_llm_config(llm_config: dict, bench_name: str | None) -> dict:
+        resolved = dict(llm_config)
+        bench_overrides = resolved.pop("bench_overrides", {})
+        if bench_name and isinstance(bench_overrides, dict):
+            override = bench_overrides.get(bench_name, {})
+            if isinstance(override, dict):
+                resolved.update(override)
+        return resolved
 
     def __call__(self, prompt: str, label_set: list[str], **kwargs) -> str:
         """Generate response text using the prompt. The response should be parsed to a label in the label_set."""

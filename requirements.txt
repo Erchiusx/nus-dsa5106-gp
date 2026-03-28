@@ -2,7 +2,7 @@
 # close-weight
 openai
 anthropic
-google-generativeai
+google-genai
 google-cloud-aiplatform
 # open-weight
 groq

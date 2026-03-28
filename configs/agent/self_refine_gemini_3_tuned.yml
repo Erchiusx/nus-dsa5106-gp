@@ -1,0 +1,18 @@
+agent_name: "self_refine"
+# LLM hyperparameters
+llm:
+  series: "gemini_dev"
+  model_name: "gemini-3-flash-preview"
+  temperature: 0.0
+  max_tokens: 256
+  bench_overrides:
+    spider:
+      max_tokens: 768
+    cosql:
+      max_tokens: 768
+    bird:
+      max_tokens: 1024
+    ds_1000:
+      max_tokens: 1536
+    hotpotqa_distract:
+      max_tokens: 768

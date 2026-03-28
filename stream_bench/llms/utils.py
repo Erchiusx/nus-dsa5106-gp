@@ -4,6 +4,7 @@ import openai
 import together
 from together.error import TogetherException
 import anthropic
+import google.genai.errors as genai_errors
 import google.api_core.exceptions as g_exceptions
 import urllib.request
 from colorama import Fore, Style
@@ -18,6 +19,7 @@ def retry_with_exponential_backoff(
     errors_tuple = (
         openai.RateLimitError, openai.APIError,
         g_exceptions.ResourceExhausted, g_exceptions.ServiceUnavailable, g_exceptions.GoogleAPIError,
+        genai_errors.APIError, genai_errors.ClientError, genai_errors.ServerError,
         anthropic.BadRequestError, anthropic.InternalServerError, anthropic.RateLimitError,
         urllib.error.HTTPError, urllib.error.URLError,
         groq.RateLimitError, groq.InternalServerError, groq.APIConnectionError,

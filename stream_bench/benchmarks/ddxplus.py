@@ -214,8 +214,7 @@ class MedicalDiagnosisBench(Bench):
         # Search for the pattern <number>. <diagnosis> using `re`, and extract <number>
         numbers = re.findall(pattern=r"(\d+)\.", string=res)
         if len(numbers) == 0:
-            # Gemini often returns just the diagnosis index, e.g. "7"
-            bare_number = re.match(pattern=r"^\s*(\d+)(?:\s|$|:|-)", string=res)
+            bare_number = re.match(pattern=r"^\s*(\d+)(?:\s|$|:|-|/)", string=res)
             if bare_number is not None:
                 numbers = [bare_number.group(1)]
         if len(numbers) == 1:
