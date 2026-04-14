@@ -46,6 +46,7 @@ python -m stream_bench.pipelines.run_bench \
     --use_wandb
 ```
 In this example, we run the `GroundTruthAgent` on `DS-1000`. One may run on other datasets by replacing the `<dataset_name>.yml` file of the `--bench_cfg` argument.
+`--entity` is the Weights & Biases username or team name to log to, not the benchmark entity name. The value `"photocopier"` only works if your W&B account has permission to write to that workspace. If you are logging to your own account, replace it with your own W&B username/team or omit `--entity`.
 
 ### Run the Main Script
 In this example, the `ZeroShot` baseline on the `DDXPlus` dataset is executed. Written scripts for running other datasets can be found in `./scripts`.

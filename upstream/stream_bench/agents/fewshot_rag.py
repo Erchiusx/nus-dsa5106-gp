@@ -10,6 +10,7 @@ from stream_bench.benchmarks.utils import extract_json_string
 class Method(Enum):
     CORRECT_SELF_COT = "self_stream_icl_cot"
     CORRECT_SELF = "self_stream_icl"
+    INCORRECT_SELF = "self_stream_icl_negative"
     MEM_PROMPT = "mem_prompt"
 
 class FewShotRAGAgent(Agent):
@@ -54,6 +55,7 @@ class FewShotRAGAgent(Agent):
         fewshot_template: str,
         prompt_cot: str,
         fewshotcot_template: str = None,
+        negative_fewshot_template: str = None,
         parse_template: str = None,
         label_set: set[str] = None,
         **kwargs
@@ -80,6 +82,9 @@ class FewShotRAGAgent(Agent):
         if self.method == Method.CORRECT_SELF_COT.value:
             template_w_rag = fewshotcot_template
             template_wo_rag = prompt_cot
+        elif self.method == Method.INCORRECT_SELF.value:
+            template_w_rag = negative_fewshot_template
+            template_wo_rag = prompt_zeroshot
         else:
             template_w_rag = fewshot_template
             template_wo_rag = prompt_zeroshot
@@ -140,6 +145,11 @@ class FewShotRAGAgent(Agent):
             if not feedbacks["is_correct"]:
                 return False  # If not correct -> Do not update RAG
             answer = feedbacks["self_output"]
+        elif self.method == Method.INCORRECT_SELF.value:
+            assert ("self_output" in feedbacks) and ("is_correct" in feedbacks)
+            if feedbacks["is_correct"]:
+                return False  # Only store failures for the negative-memory variant
+            answer = feedbacks["self_output"]
         elif self.method == Method.MEM_PROMPT.value:
             assert ("self_output" in feedbacks) and ("is_correct" in feedbacks)
             answer = feedbacks["self_output"]
@@ -156,6 +166,8 @@ class FewShotRAGAgent(Agent):
             chunk = feedbacks["memprompt_template"].format(question=question, answer=answer, correctness=correctness_text)
         elif self.method == Method.CORRECT_SELF.value:
             chunk = feedbacks["shot_template"].format(question=question, answer=answer)
+        elif self.method == Method.INCORRECT_SELF.value:
+            chunk = feedbacks["negative_shot_template"].format(question=question, answer=answer)
         elif self.method == Method.CORRECT_SELF_COT.value:
             chunk = feedbacks["shot_template"].format(question=question + f"\nRationale: {self.cur_rationale}", answer=answer)
         else:

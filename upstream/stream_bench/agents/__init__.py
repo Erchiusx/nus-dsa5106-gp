@@ -18,6 +18,7 @@ TASKS = {
     "grow_prompt": ScratchPadAgent,
     "mem_prompt": FewShotRAGAgent,
     "self_stream_icl": FewShotRAGAgent,
+    "self_stream_icl_negative": FewShotRAGAgent,
     "self_stream_icl_cot": FewShotRAGAgent,
     "ma_rr": MultiAgent,
     "ma_rr_cot": MultiAgent,

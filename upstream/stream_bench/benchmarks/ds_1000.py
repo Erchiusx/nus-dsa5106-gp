@@ -32,6 +32,7 @@ class DS1000(Bench):
         split: str = "test",
         seed: int = 0,
         feedback: str = "correctness",
+        max_samples: int | None = None,
         timeout=3.0,
         agent=None,
         mode='instruct',
@@ -43,6 +44,7 @@ class DS1000(Bench):
         self.split = split
         self.seed = seed
         self.feedback = feedback
+        self.max_samples = max_samples
         self.total = 0
         self.correct_stats = {lib: [] for lib in ['Pytorch', 'Tensorflow', 'Pandas', 'Numpy', 'Matplotlib', 'Sklearn', 'Scipy']}
         self.timeout = timeout
@@ -53,7 +55,10 @@ class DS1000(Bench):
 
     def get_dataset(self):
         """Returns dataset for the task or an iterable of any object, that get_prompt can handle"""
-        return self.dataset[self.split].shuffle(seed=self.seed)
+        dataset = self.dataset[self.split].shuffle(seed=self.seed)
+        if self.max_samples is not None:
+            dataset = dataset.select(range(min(self.max_samples, len(dataset))))
+        return dataset
 
     # Next, I would like to refactor the following code to be like the class GeneralText2SQL
     @staticmethod
@@ -144,6 +149,20 @@ class DS1000(Bench):
         return strip_all_lines(prompt)
 
     @staticmethod
+    def get_negative_shot_template() -> str:
+        prompt = textwrap.dedent(f"""\
+        Similar past mistake:
+        The user's requirements:
+        '''
+        {{question}}
+        '''
+        Incorrect solution that failed the tests:
+        ```python
+        {{answer}}
+        ```""")
+        return strip_all_lines(prompt)
+
+    @staticmethod
     def get_fewshot_template(
         question: str,
         exec_context: str
@@ -172,6 +191,43 @@ class DS1000(Bench):
         assertEqual(test_env["result"], expected_result)
         '''
         
+        Now, generate your code directly in the following format:
+        ```python
+        <your_code>
+        ```""")
+        return strip_all_lines(prompt)
+
+    @staticmethod
+    def get_negative_fewshot_template(
+        question: str,
+        exec_context: str
+    ) -> str:
+        prompt = textwrap.dedent(f"""\
+        You are performing a python programming task to satisfy the user's requirements.
+        Below are similar past mistakes and the incorrect code that failed their tests:
+
+        {{fewshot_text}}
+
+        Learn from these failures. Avoid reusing the same flawed patterns, and write a fresh solution that will pass the tests.
+
+        The user's requirements:
+        '''
+        {question}
+        '''
+
+        You need to provide your solution in python code to satisfy the user's requirements. Your code will be tested as follows (enclosed in '''):
+        '''
+        {exec_context}
+
+        code = exec_context.replace("[insert]", <your_code>)
+        a_test_case = generate_test_case()
+        test_input, expected_result = a_test_case
+        test_env = {{"test_input": test_input}}
+        exec(code, test_env)
+        assertEqual(test_env["result"], expected_result)
+        '''
+
+        Do not repeat the kinds of mistakes shown above.
         Now, generate your code directly in the following format:
         ```python
         <your_code>
@@ -207,6 +263,7 @@ class DS1000(Bench):
         row_input["prompt_fewshot"] = self.get_fewshot_prompt(question=row_input["question"], exec_context=exec_context)
         row_input["prompt_cot"] = self.get_cot_prompt(question=row_input["question"], exec_context=exec_context)
         row_input["fewshot_template"] = self.get_fewshot_template(question=row_input["question"], exec_context=exec_context)
+        row_input["negative_fewshot_template"] = self.get_negative_fewshot_template(question=row_input["question"], exec_context=exec_context)
         row_input["feedback_template"] = self.get_feedback_template(question=row_input["question"], exec_context=exec_context)
         row_input["refine_template"] = self.get_refine_template(question=row_input["question"], exec_context=exec_context)
         return row_input
@@ -295,6 +352,7 @@ class DS1000(Bench):
             "is_correct": res["correct"],
             "ground_truth": row["reference_code"],
             "shot_template": self.get_shot_template(),
+            "negative_shot_template": self.get_negative_shot_template(),
             "memprompt_template": self.get_memprompt_template()
         }
         return has_feedback, feedbacks
@@ -321,7 +379,10 @@ class DS1000(Bench):
 
     @staticmethod
     def extract_after_exec_content(code_context: str) -> str:
-        return re.findall(pattern=r'exec_context.*"""', string=code_context, flags=re.DOTALL)
+        matches = re.findall(pattern=r'exec_context.*?"""', string=code_context, flags=re.DOTALL)
+        if matches:
+            return matches[0]
+        return code_context
 
     @staticmethod
     def get_feedback_template(question: str, exec_context: str) -> str:

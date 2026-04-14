@@ -15,11 +15,33 @@ from tqdm import tqdm
 from openai import OpenAI
 from openai.types import Batch
 from argparse import ArgumentParser, Namespace
+from wandb.errors import CommError
 
 from stream_bench.benchmarks import Bench, load_benchmark
 from stream_bench.agents import Agent, load_agent
 from stream_bench.llms.oai_chat import OpenAIChat
 from .utils import merge_dicts
+
+
+def init_wandb(args: Namespace, agent_cfg: dict, bench_cfg: dict, agent: Agent) -> None:
+    project = args.project if (args.project is not None) else f"streambench-{bench_cfg['bench_name']}"
+    try:
+        wandb.init(
+            project=project,
+            entity=args.entity,
+            name=args.name if (args.name is not None) else agent.get_name(),
+            config=merge_dicts(dicts=[agent_cfg, bench_cfg])  # NOTE: agent configurations and benchmark configurations
+        )
+    except CommError as e:
+        error_msg = str(e)
+        if "permission denied" in error_msg.lower():
+            raise RuntimeError(
+                "W&B initialization failed with a permission error. "
+                f"The provided --entity value ({args.entity!r}) must be a W&B username or team name "
+                "that your API key can write to. If you want to log to your own account, remove "
+                "--entity or replace it with your own W&B username/team."
+            ) from e
+        raise
 
 def setup_args() -> Namespace:
     parser = ArgumentParser()
@@ -235,12 +257,7 @@ def main():
     step2info = get_step_to_info(batch_download_path)
 
     if args.use_wandb:
-        wandb.init(
-            project=args.project if (args.project is not None) else f"streambench-{bench_cfg['bench_name']}",
-            entity=args.entity,
-            name=args.name if (args.name is not None) else agent.get_name(),
-            config=merge_dicts(dicts=[agent_cfg, bench_cfg])  # NOTE: agent configurations and benchmark configurations
-        )
+        init_wandb(args, agent_cfg, bench_cfg, agent)
 
     for time_step, row in enumerate(tqdm(bench.get_dataset(), dynamic_ncols=True)):
         row['time_step'] = time_step
