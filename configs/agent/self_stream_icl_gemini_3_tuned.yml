@@ -1,0 +1,27 @@
+agent_name: "self_stream_icl"
+mode: "normal"
+seed: 42
+# LLM hyperparameters
+llm:
+  series: "gemini_dev"
+  model_name: "gemini-3-flash-preview"
+  temperature: 0.0
+  max_tokens: 128
+  bench_overrides:
+    spider:
+      max_tokens: 512
+    cosql:
+      max_tokens: 512
+    bird:
+      max_tokens: 1024
+    ds_1000:
+      max_tokens: 1024
+    hotpotqa_distract:
+      max_tokens: 512
+# RAG configurations
+rag:
+  embedding_model: "BAAI/bge-base-en-v1.5"
+  top_k: 16
+  order: "similar_at_bottom"
+  rag_filename: null
+  seed: 42
