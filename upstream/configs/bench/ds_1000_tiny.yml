@@ -1,0 +1,5 @@
+bench_name: "ds_1000"
+split: "test"
+feedback: "correctness"
+seed: 42
+max_samples: 20
