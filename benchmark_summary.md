@@ -9,7 +9,7 @@ Values below are percentages.
 | CoT | 81.37 | 60.68 | 48.31 | 80.80 | N/A | 77.78 | 67.93 | 83.21 |
 | Self-Refine | 81.42 | 59.29 | 43.81 | 82.60 | N/A | 77.10 | N/A | N/A |
 | Self-StreamICL | 81.14 | 59.58 | 41.79 | 81.50 | N/A | 77.32 | 67.53 | 82.50 |
-| MAM-StreamICL (Qwen+Gemini) | 79.46 | 57.89 | 39.63 | 73.60 | N/A | TBD | TBD | TBD |
+| MAM-StreamICL (Qwen+Gemini) | 79.46 | 57.89 | 39.63 | 73.60 | N/A | 72.96 | 65.73 | 80.90 |
 
 ## Sources
 
