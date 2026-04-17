@@ -28,12 +28,13 @@ class MultiAgent(Agent):
         self.warmup_steps = config["warmup_steps"]  # Use round-robin for the first warmup_steps
         # Originally in super().__init__()
         self.config = config
-        self.llms = [get_llm(llm["series"], llm["model_name"]) for llm in config["llms"]]
+        self.llm_configs = [self._resolve_llm_config(llm, config.get("bench_name")) for llm in config["llms"]]
+        self.llms = [get_llm(llm["series"], llm["model_name"]) for llm in self.llm_configs]
         self.exp_name = config["exp_name"] if "exp_name" in config else self.get_name()
         self.log_path = f'log/{config["bench_name"]}/{config["split"]}/{self.exp_name}'
         self.logger = setup_logger(name="jsonlines_logger", log_file=f'{self.log_path}.jsonl')
-        self.llm_names = [llm["model_name"] for llm in config["llms"]]
-        self.LOG_KEYS += [llm["model_name"] for llm in config["llms"]]
+        self.llm_names = [llm.get("name", llm["model_name"]) for llm in self.llm_configs]
+        self.LOG_KEYS += self.llm_names
         self.log_info = {KEY: 0 for KEY in self.LOG_KEYS}  # log information of the current data point
         self.accum_log_info = {KEY: 0 for KEY in self.LOG_KEYS}  # accum_log_info: accumulation of self.log_info through time steps
         # Initialize information for each agent arm
@@ -53,9 +54,9 @@ class MultiAgent(Agent):
         self,
         question: str,
         prompt_zeroshot: str,
-        fewshot_template: str,
-        prompt_cot: str,
-        fewshotcot_template: str,
+        fewshot_template: str = "",
+        prompt_cot: str = "",
+        fewshotcot_template: str = "",
         **kwargs
     ) -> str:
         shots = self.rag.retrieve(query=question, top_k=self.rag.top_k) if (self.rag.insert_acc > 0) else []
@@ -86,8 +87,8 @@ class MultiAgent(Agent):
         llm = self.llms[arm]
         pred_text, pred_info = llm(
             prompt=prompt,
-            max_tokens=self.config["llms"][arm]["max_tokens"],
-            temperature=self.config["llms"][arm]["temperature"]
+            max_tokens=self.llm_configs[arm]["max_tokens"],
+            temperature=self.llm_configs[arm]["temperature"]
         )
         # Logging
         self.update_log_info(log_data={
@@ -174,7 +175,7 @@ class MultiAgent(Agent):
         return self.cur_arm
 
     def get_name(self) -> str:
-        llm_names = [llm["model_name"] for llm in self.config["llms"]]
+        llm_names = [llm.get("name", llm["model_name"]) for llm in self.llm_configs]
         return "__".join([
             self.config["agent_name"],
             "_".join(llm_names),
