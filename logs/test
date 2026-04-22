@@ -1,0 +1,27 @@
+./logs/grow_prompt-normal__openai__qwen-plus__16-chunks__seed-43.jsonl 395 FixedQueue {
+  store: [
+    false, true,  true,  true,
+    true,  true,  false, true,
+    true,  false, false, true,
+    true,  false, false, true
+  ],
+  count: { true: 297, false: 98 }
+} 75.19
+./logs/grow_prompt-only_correct__openai__qwen-plus__16-chunks__seed-43.jsonl 395 FixedQueue {
+  store: [
+    false, true,  true,  true,
+    true,  true,  false, true,
+    true,  false, false, true,
+    true,  false, false, true
+  ],
+  count: { true: 299, false: 96 }
+} 75.70
+./logs/grow_prompt-only_incorrect__openai__qwen-plus__16-chunks__seed-43.jsonl 395 FixedQueue {
+  store: [
+    false, true,  false, true,
+    true,  true,  false, true,
+    true,  false, false, true,
+    true,  false, false, true
+  ],
+  count: { true: 289, false: 106 }
+} 73.16

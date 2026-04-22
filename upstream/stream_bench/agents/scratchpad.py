@@ -32,15 +32,16 @@ class ScratchPadAgent(Agent):
         y_chunks = list()
         n_chunks = list()
         not_corr_verb = "not correct"
-        
-        for chunk in self.dq:
-            if chunk.strip().endswith(not_corr_verb):
-                n_chunks.append(chunk)
-            else:
-                y_chunks.append(chunk)
+
+        for chunk, correctness in self.dq:
+            # if chunk.strip().endswith(not_corr_verb):
+            #     n_chunks.append(chunk)
+            # else:
+            #     y_chunks.append(chunk)
+            (y_chunks if correctness else n_chunks).append(chunk)
         
         if self.mode == "normal":
-            chunks = self.dq
+            chunks = y_chunks + n_chunks
         elif self.mode == "only_correct":
             chunks = y_chunks
         elif self.mode == "only_incorrect":
@@ -90,11 +91,17 @@ class ScratchPadAgent(Agent):
             raise NotImplementedError
 
         if self.method == Method.GROW_PROMPT.value:
-            chunk = feedbacks["memprompt_template"].format(
-                        question=question,
-                        answer=answer,
-                        correctness=correctness_text
-                    )
+            # chunk = feedbacks["memprompt_template"].format(
+            #             question=question,
+            #             answer=answer,
+            #             correctness=correctness_text
+            #         )
+            chunk = (
+                feedbacks["shot_template"] if feedbacks["is_correct"] else feedbacks["negative_shot_template"]
+            ).format(
+                question=question,
+                answer=answer
+            ), feedbacks["is_correct"]
             self.dq.append(chunk)
             if len(self.dq) > self.top_k:
                 self.dq.popleft()
