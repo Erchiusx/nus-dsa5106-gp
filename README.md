@@ -9,7 +9,6 @@ The `upstream/` directory stores the original StreamBench codebase from the pape
 - `upstream/`: original StreamBench implementation, including benchmark pipelines, agent definitions, configs, and the upstream README.
 - `scripts/`: helper scripts used during our project work.
 - `logs/`: experiment outputs and logs from our reproduction and extension runs.
-- `DSA5106_final_project (1).pdf`: our final report describing the project motivation, reproduction results, and extension study.
 - `conda.yaml`: exported environment used in our project.
 - `makefile`: minimal environment setup helper.
 
