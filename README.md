@@ -2,7 +2,7 @@
 
 This repository contains our DSA5106 final project based on the paper *StreamBench: Towards Benchmarking Continuous Improvement of Language Agents*.
 
-The `upstream/` directory stores the original StreamBench codebase from the paper. On top of that code, we added project-specific scripts, experiment logs, and a small extension study examining how different memory constructions behave for stronger modern models.
+The `upstream/` directory stores the original StreamBench codebase from the paper. On top of that code, we added project-specific scripts, experiment logs, and a small extension study examining how different memory constructions behave for stronger modern models. Some Gemini-based reproduction code is maintained separately in the `gemini3` branch rather than in the main branch snapshot.
 
 ## Repository Structure
 
@@ -11,6 +11,7 @@ The `upstream/` directory stores the original StreamBench codebase from the pape
 - `logs/`: experiment outputs and logs from our reproduction and extension runs.
 - `conda.yaml`: exported environment used in our project.
 - `makefile`: minimal environment setup helper.
+- `gemini3` branch: additional code for our Gemini-based reproduction experiments.
 
 ## What We Did
 
@@ -49,6 +50,7 @@ If you want the exact exported environment used during the project, refer to `co
 
 - For original usage details, benchmark commands, and dataset preparation instructions, see `upstream/README.md`.
 - This repository is primarily organized as a course project archive: the upstream research code is preserved, while our additions document how we reproduced and extended the original work.
+- If you are specifically looking for the Gemini reproduction setup, check the `gemini3` branch.
 
 ## Reference
 
